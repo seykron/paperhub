@@ -22,7 +22,7 @@
       <form action="/" method="get">
         <label>
           <span>Git repo:</span><br />
-          <input name="repo" value="{{repo}}">
+          <input type="text" name="repo" value="{{repo}}">
           <button type="submit">Connect</button>
         </label>
       </form>
@@ -35,8 +35,11 @@
       {{/if}}
     </div>
     <form class="document" action="/" method="post">
+      <label><span>File name</span><input type="text" name="file" value="{{file}}"></label>
+      <a target="_blank" href="?repo={{repo}}&amp;file={{file}}&amp;preview=true&amp;page=0">Preview</a>
       <button class="convert" type="submit">convert</button>
       <textarea name="document">{{document}}</textarea>
+      <input type="hidden" name="repo" value="{{repo}}">
     </form>
   </body>
 </html>

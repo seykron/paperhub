@@ -1,7 +1,6 @@
 #!/usr/bin/node
 
 var CONVERT_CMD = __dirname + "/compile-document.sh";
-var GIT_BASE = __dirname + "/workspace";
 
 var express = require('express');
 var engines = require('consolidate');
@@ -9,6 +8,9 @@ var app = express();
 var execFile = require("child_process").execFile;
 var fs = require("fs");
 var git = require("gift");
+var path = require("path");
+var gm = require("gm").subClass({ imageMagick: true });
+var crypto = require("crypto");
 
 app.use(express.bodyParser({
   keepExtensions: true,
@@ -54,19 +56,47 @@ var buildFilesTree = function (root, callback) {
   };
 
   root.contents(function (err, children) {
-    nextNode(children, children.shift(), callback);
+    if (children) {
+      nextNode(children, children.shift(), callback);
+    } else {
+      callback(null, []);
+    }
   });
 };
 
-var openRepo = function (remoteRepo, localRepo, callback) {
+var resolveFile = function (req, localRepo) {
+  var file = req.param("file");
+  var document = req.param("document");
+  var hash = crypto.createHash("sha1");
+  var fullPath = null;
+
+  if (!file && document) {
+    // Hashes the content, if possible.
+    hash.update(document);
+    fullPath = path.join(localRepo, hash.digest("hex") + ".md");
+  } else if (file) {
+    fullPath = path.join(localRepo, file.replace(/(\/)*\.\.(\/)*|^\//ig, ''));
+  }
+
+  // Normalizes path, just to avoid scriptkiddies.
+  return fullPath;
+};
+
+var openRepo = function (req, callback) {
+  var remoteRepo = req.param("repo");
+  var repoName = remoteRepo || "default";
+  var localRepo = path.join(__dirname, "workspace", repoName
+    .replace(/[\/\\:]/ig, "_"));
+  var requiredFile = req.param("file");
   var proceed = function (repo) {
     buildFilesTree(repo.tree(), function (err, files) {
-      callback(err, repo, files.map(function (file) {
+      var filesMap = files.map(function (file) {
         return {
           repo: remoteRepo,
           name: file
         };
-      }));
+      });
+      callback(err, repo, filesMap, resolveFile(req, localRepo));
     });  
   };
 
@@ -75,70 +105,84 @@ var openRepo = function (remoteRepo, localRepo, callback) {
   } else {
     fs.mkdirSync(localRepo);
 
-    git.clone(remoteRepo, localRepo, function (err, repo) {
-      if (err) {
-        callback(err);
-      } else {
-        proceed(repo);
-      }
-    });
+    if (remoteRepo) {
+      git.clone(remoteRepo, localRepo, function (err, repo) {
+        if (err) {
+          callback(err);
+        } else {
+          proceed(repo);
+        }
+      });
+    } else {
+      // Default local repository.
+      git.init(localRepo, function (err, repo) {
+        if (err) {
+          callback(err);
+        } else {
+          proceed(repo);
+        }
+      });    
+    }
   }
 };
 
-var loadFile = function (localRepo, file, callback) {
-  var requiredFile = file;
-  if (!requiredFile) {
-    callback();
-    return;
-  }
-  // Normalizes path, just to avoid scriptkiddies.
-  requiredFile = requiredFile.replace(/(\/)*\.\.(\/)*|^\//ig, '');
-  fs.readFile(localRepo + "/" + requiredFile, callback);
+var sendResponse = function (req, res, error, files, document) {
+  res.render("index.html", {
+    error: error,
+    repo: req.param("repo"),
+    gitFiles: files,
+    document: document || req.param("document"),
+    file: req.param("file")
+  });
 };
 
 app.get('/', function (req, res) {
-  var localRepo;
-  var remoteRepo = req.param("repo");
+  openRepo(req, function (err, repo, files, currentFile) {
+    var preview = req.param("preview");
+    var page = req.param("page") || 0;
+    var previewFile = currentFile + "." + page + ".png";
+    var outputFile = currentFile + ".pdf";
 
-  if (remoteRepo) {
-    localRepo = GIT_BASE + "/" + remoteRepo.replace(/[\/\\:]/ig, "_");
-
-    openRepo(remoteRepo, localRepo, function (err, repo, files) {
-      loadFile(localRepo, req.param("file"), function (err, document) {
-        res.render("index.html", {
-          error: err,
-          repo: remoteRepo,
-          gitFiles: files,
-          document: document
+    if (fs.existsSync(currentFile)) {
+      if (preview) {
+        gm(outputFile + "[" + page + "]").write(previewFile, function (err) {
+          if (err) {
+            sendResponse(req, res, "Preview does not exist, did you invoked " +
+              "convert first? :)", files);
+          } else {
+            res.sendfile(previewFile);
+          }
         });
-      });
-    });
-  } else {
-    res.render("index.html");
-  }
+      } else {
+        fs.readFile(currentFile, function (err, document) {
+          sendResponse(req, res, err, files, document);
+        });      
+      }
+    } else {
+      sendResponse(req, res, err, files);
+    }
+  });
 });
 
 app.post("/", function (req, res) {
-  var tempFile = __dirname + "/data-" + Date.now() +
-    Math.floor((Math.random() * 37159)) + ".md";
-  var params = [tempFile, "-o " + tempFile + ".pdf"];
+  openRepo(req, function (err, repo, files, currentFile) {
+    var outputFile = currentFile + ".pdf";
+    var params = [currentFile, "-o " + outputFile];
 
-  fs.writeFileSync(tempFile, req.body.document);
+    fs.writeFileSync(currentFile, req.body.document);
 
-  execFile(CONVERT_CMD, params, function (error, stdout, stderr) {
-    if (error) {
-      res.render("index.html", {
-        error: stderr.toString(),
-        document: req.body.document
-      });
-      fs.unlinkSync(tempFile);
-    } else {
-      res.download(tempFile + ".pdf", "document.pdf", function (err) {
-        fs.unlinkSync(tempFile);
-        fs.unlinkSync(tempFile + ".pdf");
-      });
-    }
-  });  
+    execFile(CONVERT_CMD, params, function (error, stdout, stderr) {
+      if (error) {
+        sendResponse(req, res, stderr.toString(), files);
+      } else {
+        res.download(outputFile, "document.pdf", function (err) {
+          if (err) {
+            sendResponse(req, res, err, files);
+          }
+        });
+      }
+    });
+  });
 });
 
 app.listen(7000);

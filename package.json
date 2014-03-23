@@ -13,6 +13,7 @@
     "express": "*",
     "handlebars": "*",
     "consolidate": "*",
-    "gift": "*"
+    "gift": "*",
+    "gm": "*"
   }
 }
