@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Convert papers from markdown to PDF</title>
+    <style type="text/css">
+      textarea {
+        width: 900px;
+        height: 600px;
+      }
+      button {
+        display: block;
+      }
+      .repo {
+        float: left;
+        width: 350px;
+      }
+    </style>
+  </head>
+  <body>
+    <p><!-- errors -->{{{error}}}</p>
+    <div class="repo">
+      <form action="/" method="get">
+        <label>
+          <span>Git repo:</span><br />
+          <input name="repo" value="{{repo}}">
+          <button type="submit">Connect</button>
+        </label>
+      </form>
+      {{#if gitFiles}}
+        <ul>
+          {{#each gitFiles}}
+            <li><a href="?repo={{repo}}&amp;file={{name}}">{{name}}</a></li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </div>
+    <form class="document" action="/" method="post">
+      <button class="convert" type="submit">convert</button>
+      <textarea name="document">{{document}}</textarea>
+    </form>
+  </body>
+</html>
+
