@@ -3,26 +3,39 @@
   <head>
     <title>Convert papers from markdown to PDF</title>
     <style type="text/css">
-      textarea {
+      textarea, #editor {
+        float: right;
+        height: 580px;
         width: 900px;
-        height: 600px;
-      }
-      button {
-        display: block;
       }
       .repo {
         float: left;
         width: 350px;
       }
+      .header {
+        text-align: right;
+      }
     </style>
   </head>
   <body>
+    <div class="header">
+      {{#if user}}
+        Logged as <a href="{{user.profileUrl}}">{{user.username}}</a>
+      {{else}}
+        <a href="/auth/github">Login with Github</a>
+      {{/if}}
+    </div>
     <p><!-- errors -->{{{error}}}</p>
     <div class="repo">
       <form action="/" method="get">
         <label>
           <span>Git repo:</span><br />
-          <input type="text" name="repo" value="{{repo}}">
+          <select name="repo">
+            <option value="default">Default</option>
+            {{#each repos}}
+              <option value="{{html_url}}">{{name}}</option>
+            {{/each}}
+          </select>
           <button type="submit">Connect</button>
         </label>
       </form>
@@ -37,10 +50,24 @@
     <form class="document" action="/" method="post">
       <label><span>File name</span><input type="text" name="file" value="{{file}}"></label>
       <a target="_blank" href="?repo={{repo}}&amp;file={{file}}&amp;preview=true&amp;page=0">Preview</a>
-      <button class="convert" type="submit">convert</button>
-      <textarea name="document">{{document}}</textarea>
+      <button class="convert" type="submit">Export to PDF</button>
+      <div id="editor"><!-- --></div>
       <input type="hidden" name="repo" value="{{repo}}">
     </form>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="etherpad.js"></script>
+    <script type="text/javascript">
+      jQuery('#editor').pad({
+        host: "{{PAD_URL}}",
+        baseUrl: "/p/",
+        padId: encodeURIComponent('{{documentId}}'),
+        showControls: true,
+        showChat: true,
+        useMonospaceFont: true,
+        height: 580,
+        width: 900
+      });
+    </script>
   </body>
 </html>
 

@@ -14,6 +14,10 @@
     "handlebars": "*",
     "consolidate": "*",
     "gift": "*",
-    "gm": "*"
+    "gm": "*",
+    "passport": "*",
+    "passport-github": "*",
+    "github": "*",
+    "etherpad-lite-client": "*"
   }
 }
