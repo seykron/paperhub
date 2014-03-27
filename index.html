@@ -53,7 +53,21 @@
       <button class="convert" type="submit">Export to PDF</button>
       <div id="editor"><!-- --></div>
       <input type="hidden" name="repo" value="{{repo}}">
+      <label>
+        <span>Revisions: </span>
+        {{#if revisions}}
+          <select name="revision">
+            {{#each revisions}}
+              <option value="{{commit.id}}">{{commit.id}}</option>
+            {{/each}}
+          </select>
+        {{else}}
+          Not available
+        {{/if}}
+      </label>
+      <button type="submit">Show</button>
     </form>
+
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
     <script type="text/javascript" src="etherpad.js"></script>
     <script type="text/javascript">

@@ -18,6 +18,9 @@
     "passport": "*",
     "passport-github": "*",
     "github": "*",
-    "etherpad-lite-client": "*"
+    "etherpad-lite-client": "*",
+    "async": "*",
+    "underscore": "*",
+    "diff": "*"
   }
 }
