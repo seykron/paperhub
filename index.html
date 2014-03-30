@@ -27,61 +27,76 @@
     </div>
     <p><!-- errors -->{{{error}}}</p>
     <div class="repo">
-      <form action="/" method="get">
-        <label>
-          <span>Git repo:</span><br />
-          <select name="repo">
-            <option value="default">Default</option>
-            {{#each repos}}
-              <option value="{{html_url}}">{{name}}</option>
-            {{/each}}
-          </select>
-          <button type="submit">Connect</button>
-        </label>
-      </form>
-      {{#if gitFiles}}
+      {{#if repos}}
+        <form action="/" method="get">
+          <label>
+            <span>Git repo:</span><br />
+            <select name="repo">
+              <option value="default">Default</option>
+              {{#each repos}}
+                <option value="{{html_url}}">{{name}}</option>
+              {{/each}}
+            </select>
+            <button type="submit">Connect</button>
+          </label>
+        </form>
+      {{else}}
+        Repository: {{repo.full_name}}
+      {{/if}}
+      {{#if files}}
+        <p>Files:</p>
         <ul>
-          {{#each gitFiles}}
-            <li><a href="?repo={{repo}}&amp;file={{name}}">{{name}}</a></li>
+          {{#each files}}
+            <li><a href="?repo={{../repo.html_url}}&amp;file={{id}}">{{path}}</a></li>
           {{/each}}
         </ul>
       {{/if}}
     </div>
-    <form class="document" action="/" method="post">
-      <label><span>File name</span><input type="text" name="file" value="{{file}}"></label>
-      <a target="_blank" href="?repo={{repo}}&amp;file={{file}}&amp;preview=true&amp;page=0">Preview</a>
-      <button class="convert" type="submit">Export to PDF</button>
+    <form class="document" action="/" method="get">
+      <label>
+        <span>File name</span>
+        <input type="text" name="file-name" value="{{currentFile.path}}">
+        <input type="hidden" name="file" value="{{currentFile.sha}}">
+      </label>
+      <a target="_blank" href="/preview?repo={{repo.html_url}}&amp;file={{currentFile.sha}}&amp;revision={{currentRevision.sha}}&amp;page=0">Preview</a>
+
+      <a href="/convert?repo={{repo.html_url}}&amp;file={{currentFile.sha}}&amp;revision={{currentRevision.sha}}">Export to PDF</a>
+
       <div id="editor"><!-- --></div>
-      <input type="hidden" name="repo" value="{{repo}}">
+      <input type="hidden" name="repo" value="{{repo.html_url}}">
       <label>
         <span>Revisions: </span>
         {{#if revisions}}
           <select name="revision">
             {{#each revisions}}
-              <option value="{{commit.id}}">{{commit.id}}</option>
+              <option value="{{sha}}">
+                {{sha}}
+              </option>
             {{/each}}
           </select>
+          <button type="submit">Show</button>
         {{else}}
           Not available
         {{/if}}
       </label>
-      <button type="submit">Show</button>
     </form>
 
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
-    <script type="text/javascript" src="etherpad.js"></script>
-    <script type="text/javascript">
-      jQuery('#editor').pad({
-        host: "{{PAD_URL}}",
-        baseUrl: "/p/",
-        padId: encodeURIComponent('{{documentId}}'),
-        showControls: true,
-        showChat: true,
-        useMonospaceFont: true,
-        height: 580,
-        width: 900
-      });
-    </script>
+    {{#if currentFile}}
+      <script type="text/javascript"
+        src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+      <script type="text/javascript" src="etherpad.js"></script>
+      <script type="text/javascript">
+        jQuery('#editor').pad({
+          host: "{{PAD_URL}}",
+          baseUrl: "/p/",
+          padId: encodeURIComponent('{{currentFile.id}}'),
+          showControls: true,
+          showChat: true,
+          useMonospaceFont: true,
+          height: 580,
+          width: 900
+        });
+      </script>
+    {{/if}}
   </body>
 </html>
-

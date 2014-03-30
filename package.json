@@ -13,7 +13,6 @@
     "express": "*",
     "handlebars": "*",
     "consolidate": "*",
-    "gift": "*",
     "gm": "*",
     "passport": "*",
     "passport-github": "*",
@@ -21,6 +20,9 @@
     "etherpad-lite-client": "*",
     "async": "*",
     "underscore": "*",
-    "diff": "*"
+    "extend": "*",
+    "memcached": "*",
+    "request": "*",
+    "mkdirp": "*"
   }
 }
